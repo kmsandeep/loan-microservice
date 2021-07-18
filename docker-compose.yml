@@ -1,0 +1,103 @@
+version: "3.7"
+
+services:
+  quote-service:
+    image: kmsandeep/ms-quote-service:0.0.1-SNAPSHOT
+    mem_limit: 1G
+    ports:
+      - "8100:8100"
+    networks:
+      - ms-network
+    depends_on:
+      - config-server
+      - naming-server
+      - rabbitmq
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING.CONFIG.IMPORT: optional:configserver:http://config-server:8888
+      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+      EUREKA.INSTANCE.HOSTNAME: naming-server
+      
+  loan-service:
+    image: kmsandeep/ms-loan-service:0.0.1-SNAPSHOT
+    mem_limit: 1G
+    ports:
+      - "8000:8000"
+    networks:
+      - ms-network
+    depends_on:
+      - config-server
+      - naming-server
+      - rabbitmq
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING.CONFIG.IMPORT: optional:configserver:http://config-server:8888
+      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+      EUREKA.INSTANCE.HOSTNAME: naming-server
+      
+  api-gateway:
+    image: kmsandeep/ms-api-gateway:0.0.1-SNAPSHOT
+    mem_limit: 1G
+    ports:
+      - "8765:8765"
+    networks:
+      - ms-network
+    depends_on:
+      - naming-server
+      - rabbitmq
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+   
+      
+  config-server:
+    image: kmsandeep/ms-config-server:0.0.1-SNAPSHOT
+    mem_limit: 1G
+    ports:
+      - "8888:8888"
+    networks:
+      - ms-network
+    environment:
+      SPRING.CLOUD.CONFIG.SERVER.GIT.URI: file:///C:/Users/sanmaury/dev/spring-project-config
+      
+  naming-server:
+    image: kmsandeep/ms-naming-server:0.0.1-SNAPSHOT
+    mem_limit: 1G  
+    ports:
+      - "8761:8761"
+    networks:
+      - ms-network
+      
+  zipkin-server:
+    image: openzipkin/zipkin:2.23
+    mem_limit: 1G
+    ports:
+      - "9411:9411"
+    networks:
+      - ms-network
+    environment:
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    restart: always #Restart if there is a problem starting up
+
+  rabbitmq:
+    image: rabbitmq:3.8-management
+    mem_limit: 1G
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - ms-network
+      
+networks:
+  ms-network:
